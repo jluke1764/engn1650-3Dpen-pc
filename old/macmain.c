@@ -94,9 +94,9 @@ static WindowDelegate *windowDelegate;
 	self = [super initWithFrame:frameRect];
 	if (self)
 	{
-#if 1
+#if 0
 		colorSpace = CGColorSpaceCreateWithName(kCGColorSpaceGenericRGB); //slower
-#elif 0
+#elif 1
 		colorSpace = CGColorSpaceCreateDeviceRGB(); //slower
 #else
 		CMProfileRef prof; //slightly faster than ^
