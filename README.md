@@ -36,3 +36,24 @@ To compile and run the programs, you need to:
 - speeding up macmain by using "metal"
 - example for virtual com port
 - bugs / unfinished things in macmain
+
+--- 
+
+### 2/9/23 JC
+
+#### Cam
+1. Connect to webcam
+2. Connect to USB cam
+
+#### USB (to pen)
+1. Receive IMU data (orientation, accelerometer, compass)
+2. send LED data
+3. receive button input (both buttons)
+
+#### Correction Algo
+1. Object detection for circle
+2. ellipse correction (x, y coordinates)
+3. depth detection/size of ellipse (z)
+
+#### Sensor Fusion
+1. x, y, z positions
