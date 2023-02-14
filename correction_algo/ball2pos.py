@@ -1,9 +1,14 @@
+'''
+code for reading image and outputting 3d position
+Based on algorithms in ball2pos_simp.kc
+'''
+
 
 import cv2
 import math
 
-yres = 1024
-xres = 768
+xres = 1024
+yres = 768
 
 class Point3D:
     def __init__(self, x, y, z):
@@ -51,20 +56,14 @@ class linefit3d:
     
     def getplane (self):
         r = 1/self.s
-        cent = Point3D(0,0,0)
-        norm = Point3D(0,0,0)
-        cent.x = self.sx*r
-        cent.y = self.sy*r
-        cent.z = self.sz*r;
+        cent = Point3D(self.sx*r,self.sy*r,self.sz*r)
         sxx = self.sxx - self.sx*cent.x
         sxy = self.sxy - self.sx*cent.y
         syy = self.syy - self.sy*cent.y
         sxz = self.sxz - self.sx*cent.z
         szz = self.szz - self.sz*cent.z
         syz = self.syz - self.sy*cent.z
-        norm.x = sxy*syz - sxz*syy;
-        norm.y = sxy*sxz - sxx*syz;
-        norm.z = sxx*syy - sxy*sxy;
+        norm = Point3D(sxy*syz - sxz*syy, sxy*sxz - sxx*syz, sxx*syy - sxy*sxy)
         return cent, norm
 
 originpos = Point3D(10,10,10) # temp, should be a random spot.
@@ -76,34 +75,35 @@ img = cv2.imread('./test.png')
 
 print(img.shape)
 
-a,b,c,d,e,f = sph2conic(estpos.x, estpos.y, estpos.z); # est pos has to be from image
+#a,b,c,d,e,f = sph2conic(estpos.x, estpos.y, estpos.z);
 
 lf = linefit3d()
 nnorm = Point3D(0,0,0)
 flag = False
 
-for y in range(yres):
-    for x in range(xres):
-        v = (a*x + b*y + d)*x + (c*y + e)*y + f
-        if (math.fabs(v) > max(math.fabs(a*(x*2-1) + b*y + d), math.fabs(c*(y*2-1) + b*x + e))):
-            continue
-        
-        cv2.circle(img, (x,y), 4, (0,255,255), 2)
-        vx = x-ihaf.x; vy = y-ihaf.y; vz = ihaf.z; t = 1/math.sqrt(math.pow(vx,2) + math.pow(vy,2) + math.pow(vz,2));
-        lf.addpoint(vx*t,vy*t,vz*t);
-        flag = True
-        #print('addpoint ' + str(vx), +', ' + str(vy) + ', ' + str(vz))
-        
-    if(flag):
-        cent, norm = lf.getplane()
-        
-        t = cent.x*norm.x + cent.y*norm.y + cent.z*norm.z;
-        t = 1/math.sqrt(norm.x*norm.x + norm.y*norm.y + norm.z*norm.z - t*t);
-        estpos.x = norm.x*t
-        estpos.y = norm.y*t
-        estpos.z = norm.z*t
-    
-    #print(str(estpos.x) + ',' + str(estpos.y) + ',' + str(estpos.z))
+for y in range(0, yres, 10):
+    wasBlack = True
+    for x in range(0, xres, 2):
+        if wasBlack and img[y,x,0] != 0:
+            wasBlack = False
+            
+            cv2.circle(img, (x,y), 4, (0,255,0), 2)
+            vx = x-ihaf.x
+            vy = y-ihaf.y
+            vz = ihaf.z
+            t = 1/math.sqrt(math.pow(vx,2) + math.pow(vy,2) + math.pow(vz,2));
+            lf.addpoint(vx*t,vy*t,vz*t);
+
+cent, norm = lf.getplane()
+
+t = cent.x*norm.x + cent.y*norm.y + cent.z*norm.z;
+t = 1/math.sqrt(norm.x*norm.x + norm.y*norm.y + norm.z*norm.z - t*t);
+estpos.x = norm.x*t
+estpos.y = norm.y*t
+estpos.z = norm.z*t 
+
+print(str(estpos.x) + ',' + str(estpos.y) + ',' + str(estpos.z))
+
     
 cv2.circle(img, (int(estpos.x), int(estpos.y)), 4, (255,0,0), 2)
 cv2.imshow("image", img)
