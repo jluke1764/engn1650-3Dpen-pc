@@ -1,0 +1,110 @@
+
+import cv2
+import math
+
+yres = 1024
+xres = 768
+
+class Point3D:
+    def __init__(self, x, y, z):
+        self.x = x
+        self.y = y
+        self.z = z
+       
+        
+def sph2conic(cx,cy,cz):
+    cx2 = cx*cx; cy2 = cy*cy; cz2 = cz*cz;
+    a = 1-cy2-cz2; e = cy*cz*2;
+    c = 1-cx2-cz2; d = cx*cz*2;
+    f = 1-cx2-cy2; b = cx*cy*2;
+
+    e = e*ihaf.z - c*ihaf.y*2 - b*ihaf.x;
+    d = d*ihaf.z - a*ihaf.x*2 - b*ihaf.y;
+    f = f*ihaf.z*ihaf.z - a*ihaf.x*ihaf.x - b*ihaf.x*ihaf.y - c*ihaf.y*ihaf.y - d*ihaf.x - e*ihaf.y;
+    
+    return a,b,c,d,e,f 
+
+class linefit3d:
+    def __init__(self):
+        self.s = 0
+        self.sx = 0
+        self.sy = 0
+        self.sz = 0
+        self.sxx = 0
+        self.syy = 0
+        self.szz = 0
+        self.sxy = 0
+        self.sxz = 0
+        self.syz = 0
+        
+    def addpoint (self, x, y, z):
+        self.s += 1
+        self.sx += x
+        self.sy += y
+        self.sz += z
+        self.sxx += x*x
+        self.syy += y*y
+        self.szz += z*z
+        self.sxy += x*y
+        self.sxz += x*z
+        self.syz += y*z
+    
+    def getplane (self):
+        r = 1/self.s
+        cent = Point3D(0,0,0)
+        norm = Point3D(0,0,0)
+        cent.x = self.sx*r
+        cent.y = self.sy*r
+        cent.z = self.sz*r;
+        sxx = self.sxx - self.sx*cent.x
+        sxy = self.sxy - self.sx*cent.y
+        syy = self.syy - self.sy*cent.y
+        sxz = self.sxz - self.sx*cent.z
+        szz = self.szz - self.sz*cent.z
+        syz = self.syz - self.sy*cent.z
+        norm.x = sxy*syz - sxz*syy;
+        norm.y = sxy*sxz - sxx*syz;
+        norm.z = sxx*syy - sxy*sxy;
+        return cent, norm
+
+originpos = Point3D(10,10,10) # temp, should be a random spot.
+estpos = Point3D(10, 10, 10)
+
+ihaf = Point3D(xres/2, yres/2, xres/2)
+
+img = cv2.imread('./test.png')
+
+print(img.shape)
+
+a,b,c,d,e,f = sph2conic(estpos.x, estpos.y, estpos.z); # est pos has to be from image
+
+lf = linefit3d()
+nnorm = Point3D(0,0,0)
+flag = False
+
+for y in range(yres):
+    for x in range(xres):
+        v = (a*x + b*y + d)*x + (c*y + e)*y + f
+        if (math.fabs(v) > max(math.fabs(a*(x*2-1) + b*y + d), math.fabs(c*(y*2-1) + b*x + e))):
+            continue
+        
+        cv2.circle(img, (x,y), 4, (0,255,255), 2)
+        vx = x-ihaf.x; vy = y-ihaf.y; vz = ihaf.z; t = 1/math.sqrt(math.pow(vx,2) + math.pow(vy,2) + math.pow(vz,2));
+        lf.addpoint(vx*t,vy*t,vz*t);
+        flag = True
+        #print('addpoint ' + str(vx), +', ' + str(vy) + ', ' + str(vz))
+        
+    if(flag):
+        cent, norm = lf.getplane()
+        
+        t = cent.x*norm.x + cent.y*norm.y + cent.z*norm.z;
+        t = 1/math.sqrt(norm.x*norm.x + norm.y*norm.y + norm.z*norm.z - t*t);
+        estpos.x = norm.x*t
+        estpos.y = norm.y*t
+        estpos.z = norm.z*t
+    
+    #print(str(estpos.x) + ',' + str(estpos.y) + ',' + str(estpos.z))
+    
+cv2.circle(img, (int(estpos.x), int(estpos.y)), 4, (255,0,0), 2)
+cv2.imshow("image", img)
+cv2.waitKey(0)
