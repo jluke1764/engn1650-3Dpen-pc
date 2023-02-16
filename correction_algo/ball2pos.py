@@ -66,12 +66,12 @@ class linefit3d:
         norm = Point3D(sxy*syz - sxz*syy, sxy*sxz - sxx*syz, sxx*syy - sxy*sxy)
         return cent, norm
 
-originpos = Point3D(10,10,10) # temp, should be a random spot.
+
 estpos = Point3D(10, 10, 10)
 
 ihaf = Point3D(xres/2, yres/2, yres/2 * 1.96) # 1.96 is cot(27deg) for my laptop's camera 54 deg fov.
 
-img = cv2.imread('./test.png')
+img = cv2.imread('./test2.png')
 
 print(img.shape)
 
