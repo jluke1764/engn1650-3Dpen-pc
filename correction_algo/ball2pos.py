@@ -69,13 +69,11 @@ class linefit3d:
 originpos = Point3D(10,10,10) # temp, should be a random spot.
 estpos = Point3D(10, 10, 10)
 
-ihaf = Point3D(xres/2, yres/2, xres/2)
+ihaf = Point3D(xres/2, yres/2, yres/2 * 1.96) # 1.96 is cot(27deg) for my laptop's camera 54 deg fov.
 
 img = cv2.imread('./test.png')
 
 print(img.shape)
-
-#a,b,c,d,e,f = sph2conic(estpos.x, estpos.y, estpos.z);
 
 lf = linefit3d()
 nnorm = Point3D(0,0,0)
@@ -84,7 +82,7 @@ flag = False
 for y in range(0, yres, 10):
     wasBlack = True
     for x in range(0, xres, 2):
-        if wasBlack and img[y,x,0] != 0:
+        if wasBlack and img[y,x,0] > 150: # temp threshold for white
             wasBlack = False
             
             cv2.circle(img, (x,y), 4, (0,255,0), 2)
@@ -102,9 +100,14 @@ estpos.x = norm.x*t
 estpos.y = norm.y*t
 estpos.z = norm.z*t 
 
-print(str(estpos.x) + ',' + str(estpos.y) + ',' + str(estpos.z))
+# converting it for screen 
+t = ihaf.z/estpos.z;
+sx = estpos.x*t + ihaf.x
+sy = estpos.y*t + ihaf.y
+cv2.circle(img, (int(sx),int(sy)), 4, (255,0,0), 2)
 
-    
-cv2.circle(img, (int(estpos.x), int(estpos.y)), 4, (255,0,0), 2)
+print(str(estpos.x) + ',' + str(estpos.y) + ',' + str(estpos.z))
+print(str(sx) + ',' + str(sy) )
+
 cv2.imshow("image", img)
 cv2.waitKey(0)
