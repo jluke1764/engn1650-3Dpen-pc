@@ -134,7 +134,9 @@ int main (int argc, char **argv)
 					for(x=min(dd.x,xsiz>>1)-1;x>=0;x--)
 					{
 						i = iptr[x*2];
-						if (bstatus&1) { i = ~i; } //example of insanely stupid image processing
+						if (bstatus&1) {
+							i = 1; //TODO here
+						} //example of insanely stupid image processing
 						drawpix(&dd,x,y,i);
 					}
 				}

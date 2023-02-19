@@ -68,9 +68,7 @@ class linefit3d:
 
 
 estpos = Point3D(10, 10, 10)
-
 ihaf = Point3D(xres/2, yres/2, yres/2 * 1.96) # 1.96 is cot(27deg) for my laptop's camera 54 deg fov.
-
 img = cv2.imread('./test2.png')
 
 print(img.shape)
