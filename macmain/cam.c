@@ -121,31 +121,33 @@ struct linefit3d {
     float syz;
 } typedef linefit3d;
 
-void addPoint(linefit3d self, float x, float y, float z) {
-	self.s += 1;
-	self.sx += x;
-	self.sy += y;
-	self.sz += z;
-	self.sxx += x*x;
-	self.syy += y*y;
-	self.szz += z*z;
-	self.sxy += x*y;
-	self.sxz += x*z;
-	self.syz += y*z;
+void addPoint(linefit3d* self, float x, float y, float z) {
+	self->s += 1;
+	self->sx += x;
+	self->sy += y;
+	self->sz += z;
+	self->sxx += x*x;
+	self->syy += y*y;
+	self->szz += z*z;
+	self->sxy += x*y;
+	self->sxz += x*z;
+	self->syz += y*z;
 }
     
-Point3D* getplane (linefit3d self){
-        float r = 1/self.s;
-        Point3D cent = {.x = self.sx*r, .y = self.sy*r, .z = self.sz*r};
-        float sxx = self.sxx - self.sx * cent.x;
-        float sxy = self.sxy - self.sx * cent.y;
-        float syy = self.syy - self.sy * cent.y;
-        float sxz = self.sxz - self.sx * cent.z;
-        float szz = self.szz - self.sz * cent.z;
-        float syz = self.syz - self.sy * cent.z;
-        Point3D norm = {.x = sxy*syz - sxz*syy, .y = sxy*sxz - sxx*syz, .z = sxx*syy - sxy*sxy};
-		Point3D ret[2] = {cent, norm};
-        return ret;
+void getplane (linefit3d* self, Point3D* norm, Point3D* cent ){
+        float r = 1/self->s;
+        cent->x = self->sx*r;
+		cent->y = self->sy*r;
+		cent->z = self->sz*r;
+        float sxx = self->sxx - self->sx * cent->x;
+        float sxy = self->sxy - self->sx * cent->y;
+        float syy = self->syy - self->sy * cent->y;
+        float sxz = self->sxz - self->sx * cent->z;
+        float szz = self->szz - self->sz * cent->z;
+        float syz = self->syz - self->sy * cent->z;
+        norm->x = sxy*syz - sxz*syy;
+		norm->y = sxy*sxz - sxx*syz;
+		norm->z = sxx*syy - sxy*sxy;
 }
 
 int main (int argc, char **argv)
@@ -160,7 +162,7 @@ int main (int argc, char **argv)
 	if (argc >= 3) { isrgba = atoi(argv[2]); }
 	if (webcam_init(camuse,isrgba) < 0) { msgbox(prognam,"Error initing cam","Ok"); return(1); }
 
-	xres = 1024; yres = 600; if (!initapp()) return(0);
+	xres = 1280; yres = 800; if (!initapp()) return(0);
 
 	Point3D estpos = {.x = 10, .y = 10, .z = 10};
 	Point3D ihaf = {.x = xres/2, .y = yres/2, .z = yres/2*1.96};
@@ -192,9 +194,9 @@ int main (int argc, char **argv)
 							float vx = x - ihaf.x;
 							float vy = y - ihaf.y;
 							float vz = ihaf.z;
-							float t = 1/ sqrt(pow(vx,2) +  pow(vy,2) + pow(vz,2));
-							drawcirc(&dd, (int)x, (int)y, 5, 10);
-							addPoint(lf, vx*t, vx*t, vz*t);
+							float t = 1/ sqrt(vx*vx + vy*vy + vz*vz);
+							drawcirc(&dd, (int)x, (int)y, 5, 0x00ff00);
+							addPoint(&lf, vx*t, vx*t, vz*t);
 							//printf("%d, %d ", x, y);
 						}
 						/*
@@ -208,9 +210,10 @@ int main (int argc, char **argv)
 						drawpix(&dd,x,y,i);
 					}
 				}
-				Point3D* arr = getplane(lf);
-				Point3D cent = arr[0];
-				Point3D norm = arr[1];
+				Point3D cent = {0};
+				Point3D norm = {0};
+				getplane(&lf, &norm, &cent);
+				
 				float t = cent.x*norm.x + cent.y*norm.y + cent.z*norm.z;
 				t = 1/sqrt(norm.x*norm.x + norm.y*norm.y + norm.z*norm.z - t*t);
 				estpos.x = norm.x*t;
@@ -220,7 +223,7 @@ int main (int argc, char **argv)
 				t = ihaf.z/estpos.z;
 				float sx = estpos.x*t + ihaf.x;
 				float sy = estpos.y*t + ihaf.y;
-				drawcirc(&dd, (int)sx, (int)sy, 5, 255);
+				drawcirc(&dd, (int)sx, (int)sy, 5, 0x0000ff);
 				//printf("%d, %d ", sx, sy);
 
 			}
