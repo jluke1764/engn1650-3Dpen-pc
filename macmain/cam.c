@@ -10,8 +10,8 @@ ifdef zero
 #include <stdio.h>
 #include "macmain.h"
 
-static unsigned char *cambuf = 0;
-static int cambufmal = 0, xsiz = 0, ysiz = 0, bpl = 0;
+static unsigned char cambuf[1280*800*4];
+static int camfifw = 0, xsiz = 0, ysiz = 0, bpl = 0;
 
 #if !defined(max)
 #define max(a,b) (((a) > (b)) ? (a) : (b))
@@ -44,14 +44,8 @@ static int cambufmal = 0, xsiz = 0, ysiz = 0, bpl = 0;
 	//if (CVPixelBufferGetPixelFormatType(videoFrame) == kCVPixelFormatType_OneComponent8) printf("8Mono\n");
 
 	int siz = bpl*ysiz;
-	if (siz > cambufmal)
-	{
-		if (cambuf) free(cambuf);
-		cambuf = (unsigned char *)malloc(siz); cambufmal = siz;
-	}
-
 	memcpy(cambuf,fptr,bpl*ysiz); //Slow! Would be much faster to process image here directly - i.e. no memcpy
-
+   
 	CVPixelBufferUnlockBaseAddress(videoFrame,0);
 }
 @end
@@ -154,7 +148,9 @@ int main (int argc, char **argv)
 {
 	tiletype dd;
 	double tim = 0.0, otim, dtim, avgdtim = 0.0;
-	int i, x, y, camuse = 0, isrgba = 1;
+	static unsigned char pcambuf[1280*800];
+	static int qcambuf[1280*800];
+	int i, x, y, camuse = 0, isrgba = 0;
 
 	prognam = "Ken's MacOSX webcam viewer";
 
@@ -162,10 +158,10 @@ int main (int argc, char **argv)
 	if (argc >= 3) { isrgba = atoi(argv[2]); }
 	if (webcam_init(camuse,isrgba) < 0) { msgbox(prognam,"Error initing cam","Ok"); return(1); }
 
-	xres = 1280; yres = 800; if (!initapp()) return(0);
+	xres = 1280; yres = 720; if (!initapp()) return(0);
 
 	Point3D estpos = {.x = 10, .y = 10, .z = 10};
-	Point3D ihaf = {.x = xres/2, .y = yres/2, .z = yres/2*1.96};
+	Point3D ihaf = {.x = xsiz/2, .y = ysiz/2, .z = ysiz/2*1.96};
 	linefit3d lf = {0};
 	Point3D nnorm = {0};
 
@@ -182,32 +178,37 @@ int main (int argc, char **argv)
 			bool wasWhite = 0;
 			if (bpl > xsiz)
 			{     //BGRA:
-				for(y=min(dd.y,ysiz>>1)-1;y>=0;y--)
+				static int fifx[1280*800], fify[1280*800], fifw, fifr;
+				memcpy(qcambuf,cambuf,bpl*ysiz);
+				for(y=min(dd.y,ysiz)-1;y>=0;y--)
 				{
-					int *iptr = (int *)&cambuf[(y*2)*bpl];
-					for(x=min(dd.x,xsiz>>1)-1;x>=0;x--)
+					wasWhite = 0;
+					for(x=min(dd.x,xsiz)-1;x>=0;x--)
 					{
-						i = iptr[x*2]; // What does this mean? how to determine if it's white?
-						//printf("%d\n", i);
-						if(!wasWhite && i > -10000000){ //a temp threshold just testing it
-							wasWhite = 1;
-							float vx = x - ihaf.x;
-							float vy = y - ihaf.y;
-							float vz = ihaf.z;
-							float t = 1/ sqrt(vx*vx + vy*vy + vz*vz);
-							drawcirc(&dd, (int)x, (int)y, 5, 0x00ff00);
-							addPoint(&lf, vx*t, vx*t, vz*t);
-							//printf("%d, %d ", x, y);
+						i = (qcambuf[y*(bpl>>2) + x]&255);
+						drawpix(&dd,x,y,i*0x10101);
+					    //qcambuf[y*(bpl>>2) + x] = 0;			
+						if (i <= 200) continue;
+						fifx[0] = x; fify[0] = y; fifr = 0; fifw = 1;
+						while (fifr < fifw)
+						{
+							int x2 = fifx[fifr]; int y2 = fify[fifr]; fifr++;
+							for(i=0;i<4;i++)
+							{
+								static const int dirx[4] = {-1,+1,0,0};
+								static const int diry[4] = {0,0,-1,+1};
+								int nx = x2+dirx[i];
+								int ny = y2+diry[i];
+								if ((nx < 0) || (nx >= xsiz)) continue;
+								if ((ny < 0) || (ny >= ysiz)) continue;
+								if ((qcambuf[ny*(bpl>>2) + nx]&255) <= 200) continue;
+								fifx[fifw] = nx;
+								fify[fifw] = ny;
+								fifw++;
+								drawpix(&dd,nx,ny,0xff00ff);
+								qcambuf[ny*(bpl>>2) + nx] = 0;
+							}
 						}
-						/*
-						i = iptr[x*2];
-						if (bstatus&1) {
-							i = 1; //TODO here
-						} //example of insanely stupid image processing
-						*/
-						//i = iptr[x*2];
-
-						drawpix(&dd,x,y,i);
 					}
 				}
 				Point3D cent = {0};
@@ -223,29 +224,148 @@ int main (int argc, char **argv)
 				t = ihaf.z/estpos.z;
 				float sx = estpos.x*t + ihaf.x;
 				float sy = estpos.y*t + ihaf.y;
-				drawcirc(&dd, (int)sx, (int)sy, 5, 0x0000ff);
+				drawcirc(&dd, (int)sx, (int)sy, 10, 0xffff0000);
+			/*
+				for(y=min(dd.y,ysiz)-1;y>=0;y--)
+				{
+					wasWhite = 0;
+					int *iptr = (int *)&pcambuf[y*bpl];
+					for(x=min(dd.x,xsiz)-1;x>=0;x--)
+					{
+						i = iptr[x]; // What does this mean? how to determine if it's white?
+						//printf("%d\n", i);
+						drawpix(&dd,x,y,i);
+						int r = (i>>16)&0xff;
+						int g = (i>>8)&0xff;
+						int b = i&0xff;
+						if(!wasWhite && r > 200 && g > 200 && b > 200){ //a temp threshold just testing it
+							wasWhite = 1;
+							float vx = x - ihaf.x;
+							float vy = y - ihaf.y;
+							float vz = ihaf.z;
+							float t = 1/ sqrt(vx*vx + vy*vy + vz*vz);
+							drawcirc(&dd, (int)x, (int)y, 2, 0x00ff00);
+							addPoint(&lf, vx*t, vx*t, vz*t);
+							//printf("%d, %d ", x, y);
+						}
+						//drawpix(&dd,x,y,i);
+						
+					}
+				}
+				Point3D cent = {0};
+				Point3D norm = {0};
+				getplane(&lf, &norm, &cent);
+				
+				float t = cent.x*norm.x + cent.y*norm.y + cent.z*norm.z;
+				t = 1/sqrt(norm.x*norm.x + norm.y*norm.y + norm.z*norm.z - t*t);
+				estpos.x = norm.x*t;
+				estpos.y = norm.y*t;
+				estpos.z = norm.z*t;
+
+				t = ihaf.z/estpos.z;
+				float sx = estpos.x*t + ihaf.x;
+				float sy = estpos.y*t + ihaf.y;
+				drawcirc(&dd, (int)sx, (int)sy, 10, 0xff0000);
 				//printf("%d, %d ", sx, sy);
+				*/
 
 			}
 			else if (bpl)
 			{     //8-bit gray:
-				for(y=min(dd.y,ysiz>>1)-1;y>=0;y--)
+				static int fifx[1280*800], fify[1280*800], fifw, fifr;
+				static char got[1280*800];
+
+				memcpy(pcambuf,cambuf,bpl*ysiz);
+				memset(got,0,xsiz*ysiz);
+
+				for(y=min(dd.y,ysiz)-1;y>=0;y--)
 				{
-					unsigned char *ucptr = (unsigned char *)&cambuf[(y*2)*bpl];
-					for(x=min(dd.x,xsiz>>1)-1;x>=0;x--)
+					for(x=min(dd.x,xsiz)-1;x>=0;x--)
 					{
-						i = ((int)ucptr[x*2])*0x10101;
-						if (bstatus&1) { i = ~i; } //example of insanely stupid image processing
-						drawpix(&dd,x,y,i);
+						i = pcambuf[y*bpl + x];
+						drawpix(&dd,x,y,i*0x10101);
 					}
 				}
+				for(y=min(dd.y,ysiz)-1;y>=0;y--)
+				{
+					wasWhite = 0;
+					for(x=min(dd.x,xsiz)-1;x>=0;x--)
+					{
+						i = pcambuf[y*bpl + x];
+						if (i <= 200) continue;
+						if (got[y*xsiz + x]) continue;
+					    got[y*xsiz + x] = 1;
+						fifx[0] = x; fify[0] = y; fifr = 0; fifw = 1;
+						int sumx = 0, sumy = 0;
+						while (fifr < fifw)
+						{
+							int x2 = fifx[fifr]; int y2 = fify[fifr]; fifr++;
+							sumx += x2; sumy += y2;
+							for(i=0;i<4;i++)
+							{
+								static const int dirx[4] = {-1,+1,0,0};
+								static const int diry[4] = {0,0,-1,+1};
+								int nx = x2+dirx[i];
+								int ny = y2+diry[i];
+								if ((nx < 0) || (nx >= xsiz)) continue;
+								if ((ny < 0) || (ny >= ysiz)) continue;
+								
+								if (pcambuf[ny*bpl + nx] <= 200) continue;
+								
+								if (got[ny*xsiz + nx]) continue;
+								
+								fifx[fifw] = nx;
+								fify[fifw] = ny;
+								fifw++; if (fifw >= 1280*800) goto dammit;
+								
+								drawpix(&dd,nx,ny,0xff00ff);
+								got[ny*xsiz + nx] = 1;				
+							}
+						}
+						dammit:;
+						drawcirc(&dd,(float)sumx/fifw,(float)sumy/fifw,sqrt(fifw),0xff00ff);
+						// find highest fifw
+						//find center of it
+					}
+
+
+
+#if 0						
+							if(!wasWhite && (int)i > 200){ //hmm...
+							wasWhite = 1;
+							float vx = x - ihaf.x;
+							float vy = y - ihaf.y;
+							float vz = ihaf.z;
+							float t = 1/ sqrt(vx*vx + vy*vy + vz*vz);
+							drawcirc(&dd, (int)x, (int)y, 5, 0x00ff00);
+							addPoint(&lf, vx*t, vx*t, vz*t);
+							//printf("%d, %d ", x, y);
+						}
+#endif
+						
+					
+				}
+				Point3D cent = {0};
+				Point3D norm = {0};
+				getplane(&lf, &norm, &cent);
+				
+				float t = cent.x*norm.x + cent.y*norm.y + cent.z*norm.z;
+				t = 1/sqrt(norm.x*norm.x + norm.y*norm.y + norm.z*norm.z - t*t);
+				estpos.x = norm.x*t;
+				estpos.y = norm.y*t;
+				estpos.z = norm.z*t;
+
+				t = ihaf.z/estpos.z;
+				float sx = estpos.x*t + ihaf.x;
+				float sy = estpos.y*t + ihaf.y;
+				drawcirc(&dd, (int)sx, (int)sy, 10, 0xff0000);
 			}
 
-			for(y=540;y<600;y++)
-				for(x=960+(y&1);x<1024;x+=2)
-				{
-					drawpix(&dd,x,y,0x00ff00);
-				}
+			//for(y=540;y<600;y++)
+			//	for(x=960+(y&1);x<1024;x+=2)
+			//	{
+			//		drawpix(&dd,x,y,0x00ff00);
+			//	}
 
 			avgdtim += (dtim-avgdtim)*.05; print6x8(&dd,dd.x-64,0,0xffffff,0,"%.2f fps",1.0/avgdtim);
 			print6x8(&dd,dd.x-64,8,0xffffff,0,"cam %d",camuse);
