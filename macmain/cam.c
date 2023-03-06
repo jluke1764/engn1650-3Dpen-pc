@@ -102,6 +102,52 @@ static int webcam_init (int camuse, int isbgra)
 	return(-1);
 }
 
+struct Point3D {
+	float x;
+	float y;
+	float z;
+} typedef Point3D;
+
+struct linefit3d {
+    float s;
+    float sx;
+    float sy;
+    float sz;
+    float sxx;
+    float syy;
+    float szz;
+    float sxy;
+    float sxz;
+    float syz;
+} typedef linefit3d;
+
+void addPoint(linefit3d self, float x, float y, float z) {
+	self.s += 1;
+	self.sx += x;
+	self.sy += y;
+	self.sz += z;
+	self.sxx += x*x;
+	self.syy += y*y;
+	self.szz += z*z;
+	self.sxy += x*y;
+	self.sxz += x*z;
+	self.syz += y*z;
+}
+    
+Point3D* getplane (linefit3d self){
+        float r = 1/self.s;
+        Point3D cent = {.x = self.sx*r, .y = self.sy*r, .z = self.sz*r};
+        float sxx = self.sxx - self.sx * cent.x;
+        float sxy = self.sxy - self.sx * cent.y;
+        float syy = self.syy - self.sy * cent.y;
+        float sxz = self.sxz - self.sx * cent.z;
+        float szz = self.szz - self.sz * cent.z;
+        float syz = self.syz - self.sy * cent.z;
+        Point3D norm = {.x = sxy*syz - sxz*syy, .y = sxy*sxz - sxx*syz, .z = sxx*syy - sxy*sxy};
+		Point3D ret[2] = {cent, norm};
+        return ret;
+}
+
 int main (int argc, char **argv)
 {
 	tiletype dd;
@@ -116,6 +162,11 @@ int main (int argc, char **argv)
 
 	xres = 1024; yres = 600; if (!initapp()) return(0);
 
+	Point3D estpos = {.x = 10, .y = 10, .z = 10};
+	Point3D ihaf = {.x = xres/2, .y = yres/2, .z = yres/2*1.96};
+	linefit3d lf = {0};
+	Point3D nnorm = {0};
+
 	while (!breath())
 	{
 		otim = tim; tim = klock(); dtim = tim-otim;
@@ -125,7 +176,8 @@ int main (int argc, char **argv)
 		if (startdirectdraw(&dd.f,&dd.p,&dd.x,&dd.y))
 		{
 			drawrectfill(&dd,0,0,dd.x,dd.y,0x000000);
-
+			
+			bool wasWhite = 0;
 			if (bpl > xsiz)
 			{     //BGRA:
 				for(y=min(dd.y,ysiz>>1)-1;y>=0;y--)
@@ -133,13 +185,44 @@ int main (int argc, char **argv)
 					int *iptr = (int *)&cambuf[(y*2)*bpl];
 					for(x=min(dd.x,xsiz>>1)-1;x>=0;x--)
 					{
+						i = iptr[x*2]; // What does this mean? how to determine if it's white?
+						//printf("%d\n", i);
+						if(!wasWhite && i > -10000000){ //a temp threshold just testing it
+							wasWhite = 1;
+							float vx = x - ihaf.x;
+							float vy = y - ihaf.y;
+							float vz = ihaf.z;
+							float t = 1/ sqrt(pow(vx,2) +  pow(vy,2) + pow(vz,2));
+							drawcirc(&dd, (int)x, (int)y, 5, 10);
+							addPoint(lf, vx*t, vx*t, vz*t);
+							//printf("%d, %d ", x, y);
+						}
+						/*
 						i = iptr[x*2];
 						if (bstatus&1) {
 							i = 1; //TODO here
 						} //example of insanely stupid image processing
+						*/
+						//i = iptr[x*2];
+
 						drawpix(&dd,x,y,i);
 					}
 				}
+				Point3D* arr = getplane(lf);
+				Point3D cent = arr[0];
+				Point3D norm = arr[1];
+				float t = cent.x*norm.x + cent.y*norm.y + cent.z*norm.z;
+				t = 1/sqrt(norm.x*norm.x + norm.y*norm.y + norm.z*norm.z - t*t);
+				estpos.x = norm.x*t;
+				estpos.y = norm.y*t;
+				estpos.z = norm.z*t;
+
+				t = ihaf.z/estpos.z;
+				float sx = estpos.x*t + ihaf.x;
+				float sy = estpos.y*t + ihaf.y;
+				drawcirc(&dd, (int)sx, (int)sy, 5, 255);
+				//printf("%d, %d ", sx, sy);
+
 			}
 			else if (bpl)
 			{     //8-bit gray:

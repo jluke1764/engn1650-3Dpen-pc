@@ -75,7 +75,6 @@ print(img.shape)
 
 lf = linefit3d()
 nnorm = Point3D(0,0,0)
-flag = False
 
 for y in range(0, yres, 10):
     wasBlack = True
