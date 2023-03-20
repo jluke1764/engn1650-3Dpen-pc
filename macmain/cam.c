@@ -224,51 +224,8 @@ int main (int argc, char **argv)
 				t = ihaf.z/estpos.z;
 				float sx = estpos.x*t + ihaf.x;
 				float sy = estpos.y*t + ihaf.y;
-				drawcirc(&dd, (int)sx, (int)sy, 10, 0xffff0000);
-			/*
-				for(y=min(dd.y,ysiz)-1;y>=0;y--)
-				{
-					wasWhite = 0;
-					int *iptr = (int *)&pcambuf[y*bpl];
-					for(x=min(dd.x,xsiz)-1;x>=0;x--)
-					{
-						i = iptr[x]; // What does this mean? how to determine if it's white?
-						//printf("%d\n", i);
-						drawpix(&dd,x,y,i);
-						int r = (i>>16)&0xff;
-						int g = (i>>8)&0xff;
-						int b = i&0xff;
-						if(!wasWhite && r > 200 && g > 200 && b > 200){ //a temp threshold just testing it
-							wasWhite = 1;
-							float vx = x - ihaf.x;
-							float vy = y - ihaf.y;
-							float vz = ihaf.z;
-							float t = 1/ sqrt(vx*vx + vy*vy + vz*vz);
-							drawcirc(&dd, (int)x, (int)y, 2, 0x00ff00);
-							addPoint(&lf, vx*t, vx*t, vz*t);
-							//printf("%d, %d ", x, y);
-						}
-						//drawpix(&dd,x,y,i);
-						
-					}
-				}
-				Point3D cent = {0};
-				Point3D norm = {0};
-				getplane(&lf, &norm, &cent);
 				
-				float t = cent.x*norm.x + cent.y*norm.y + cent.z*norm.z;
-				t = 1/sqrt(norm.x*norm.x + norm.y*norm.y + norm.z*norm.z - t*t);
-				estpos.x = norm.x*t;
-				estpos.y = norm.y*t;
-				estpos.z = norm.z*t;
-
-				t = ihaf.z/estpos.z;
-				float sx = estpos.x*t + ihaf.x;
-				float sy = estpos.y*t + ihaf.y;
-				drawcirc(&dd, (int)sx, (int)sy, 10, 0xff0000);
-				//printf("%d, %d ", sx, sy);
-				*/
-
+				drawcirc(&dd, (int)sx, (int)sy, 10, 0xffff0000);
 			}
 			else if (bpl)
 			{     //8-bit gray:
@@ -277,6 +234,8 @@ int main (int argc, char **argv)
 
 				memcpy(pcambuf,cambuf,bpl*ysiz);
 				memset(got,0,xsiz*ysiz);
+
+				int largest_sumx, largest_sumy, largest_fifw = 0;
 
 				for(y=min(dd.y,ysiz)-1;y>=0;y--)
 				{
@@ -319,32 +278,25 @@ int main (int argc, char **argv)
 								fifw++; if (fifw >= 1280*800) goto dammit;
 								
 								drawpix(&dd,nx,ny,0xff00ff);
-								got[ny*xsiz + nx] = 1;				
+								got[ny*xsiz + nx] = 1;	
+
+								if (fifw > largest_fifw)
+								{
+									largest_sumx = sumx;
+									largest_sumy = sumy;
+									largest_fifw = fifw;
+								}			
 							}
 						}
+						
 						dammit:;
-						drawcirc(&dd,(float)sumx/fifw,(float)sumy/fifw,sqrt(fifw),0xff00ff);
 						// find highest fifw
 						//find center of it
 					}
-
-
-
-#if 0						
-							if(!wasWhite && (int)i > 200){ //hmm...
-							wasWhite = 1;
-							float vx = x - ihaf.x;
-							float vy = y - ihaf.y;
-							float vz = ihaf.z;
-							float t = 1/ sqrt(vx*vx + vy*vy + vz*vz);
-							drawcirc(&dd, (int)x, (int)y, 5, 0x00ff00);
-							addPoint(&lf, vx*t, vx*t, vz*t);
-							//printf("%d, %d ", x, y);
-						}
-#endif
-						
-					
 				}
+				
+				drawcirc(&dd,(float)largest_sumx/largest_fifw,(float)largest_sumy/largest_fifw,sqrt(largest_fifw),0xffffff);
+
 				Point3D cent = {0};
 				Point3D norm = {0};
 				getplane(&lf, &norm, &cent);
@@ -359,6 +311,8 @@ int main (int argc, char **argv)
 				float sx = estpos.x*t + ihaf.x;
 				float sy = estpos.y*t + ihaf.y;
 				drawcirc(&dd, (int)sx, (int)sy, 10, 0xff0000);
+
+				
 			}
 
 			//for(y=540;y<600;y++)
