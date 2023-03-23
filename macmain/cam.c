@@ -317,10 +317,10 @@ int main (int argc, char **argv)
 						if ((it_y < 0) || (it_y >= ysiz)) break;
 						if (pcambuf[it_y*bpl + it_x] <= 200){
 							drawcirc(&dd,it_x,it_y,5,0x00ff00);
-							int vx = it_x-ihaf.x;
-							int vy = it_y-ihaf.y;
-							int vz = ihaf.z;
-							int t = 1/sqrt(vx * vx + vy * vy + vz * vz);
+							float vx = it_x-ihaf.x;
+							float vy = it_y-ihaf.y;
+							float vz = ihaf.z;
+							float t = 1/sqrt(vx * vx + vy * vy + vz * vz);
 							addPoint(&lf, vx*t, vy*t, vz*t);
 							break;
 						}
@@ -338,7 +338,7 @@ int main (int argc, char **argv)
 				t = ihaf.z/estpos.z;
 				float sx = estpos.x*t + ihaf.x;
 				float sy = estpos.y*t + ihaf.y;
-				printf("%f %f %f", norm.x, norm.y, norm.z);
+				printf("%f %f %f \n", estpos.x, estpos.y, estpos.z);
 				drawcirc(&dd, (int)sx, (int)sy, 20, 0xff0000);
 
 			}
