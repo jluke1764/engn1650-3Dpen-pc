@@ -164,6 +164,8 @@ int main (int argc, char **argv)
 	Point3D ihaf = {.x = xsiz/2, .y = ysiz/2, .z = ysiz/2*1.96};
 	linefit3d lf = {0};
 	Point3D nnorm = {0};
+	Point3D cent = {0};
+	Point3D norm = {0};
 
 	while (!breath())
 	{
@@ -211,8 +213,6 @@ int main (int argc, char **argv)
 						}
 					}
 				}
-				Point3D cent = {0};
-				Point3D norm = {0};
 				getplane(&lf, &norm, &cent);
 				
 				float t = cent.x*norm.x + cent.y*norm.y + cent.z*norm.z;
@@ -235,7 +235,7 @@ int main (int argc, char **argv)
 				memcpy(pcambuf,cambuf,bpl*ysiz);
 				memset(got,0,xsiz*ysiz);
 
-				int largest_sumx, largest_sumy, largest_fifw = 0;
+				int largest_sumx, largest_sumy, largest_fifw, init_x, init_y = 0;
 
 				for(y=min(dd.y,ysiz)-1;y>=0;y--)
 				{
@@ -255,6 +255,7 @@ int main (int argc, char **argv)
 						if (got[y*xsiz + x]) continue;
 					    got[y*xsiz + x] = 1;
 						fifx[0] = x; fify[0] = y; fifr = 0; fifw = 1;
+						largest_sumx = 0; largest_sumy = 0; largest_fifw = 0; init_x =0; init_y = 0;
 						int sumx = 0, sumy = 0;
 						while (fifr < fifw)
 						{
@@ -277,7 +278,7 @@ int main (int argc, char **argv)
 								fify[fifw] = ny;
 								fifw++; if (fifw >= 1280*800) goto dammit;
 								
-								drawpix(&dd,nx,ny,0xff00ff);
+								drawpix(&dd,nx,ny,0xaa00aa);
 								got[ny*xsiz + nx] = 1;	
 
 								if (fifw > largest_fifw)
@@ -285,6 +286,8 @@ int main (int argc, char **argv)
 									largest_sumx = sumx;
 									largest_sumy = sumy;
 									largest_fifw = fifw;
+									init_x = nx;
+									init_y = ny;
 								}			
 							}
 						}
@@ -296,9 +299,34 @@ int main (int argc, char **argv)
 				}
 				
 				drawcirc(&dd,(float)largest_sumx/largest_fifw,(float)largest_sumy/largest_fifw,sqrt(largest_fifw),0xffffff);
+				static const int dir2x[6] = {-3, -2, -1,  0, +1, +2};
+				static const int dir2y[6] = {+1, +1, -1, +1, +1, +1};
 
-				Point3D cent = {0};
-				Point3D norm = {0};
+				drawcirc(&dd,init_x,init_y,20,0x00ffff);
+
+				
+				for(int j = 0; j<6; j++)
+				{
+					int it_x = init_x;
+					int it_y = init_y;
+					while (it_x < xsiz && it_y < ysiz)
+					{
+						it_x = it_x + dir2x[j];
+						it_y = it_y + dir2y[j];
+						if ((it_x < 0) || (it_x >= xsiz)) break;
+						if ((it_y < 0) || (it_y >= ysiz)) break;
+						if (pcambuf[it_y*bpl + it_x] <= 200){
+							drawcirc(&dd,it_x,it_y,5,0x00ff00);
+							int vx = it_x-ihaf.x;
+							int vy = it_y-ihaf.y;
+							int vz = ihaf.z;
+							int t = 1/sqrt(vx * vx + vy * vy + vz * vz);
+							addPoint(&lf, vx*t, vy*t, vz*t);
+							break;
+						}
+					}
+				}
+
 				getplane(&lf, &norm, &cent);
 				
 				float t = cent.x*norm.x + cent.y*norm.y + cent.z*norm.z;
@@ -310,16 +338,10 @@ int main (int argc, char **argv)
 				t = ihaf.z/estpos.z;
 				float sx = estpos.x*t + ihaf.x;
 				float sy = estpos.y*t + ihaf.y;
-				drawcirc(&dd, (int)sx, (int)sy, 10, 0xff0000);
+				printf("%f %f %f", norm.x, norm.y, norm.z);
+				drawcirc(&dd, (int)sx, (int)sy, 20, 0xff0000);
 
-				
 			}
-
-			//for(y=540;y<600;y++)
-			//	for(x=960+(y&1);x<1024;x+=2)
-			//	{
-			//		drawpix(&dd,x,y,0x00ff00);
-			//	}
 
 			avgdtim += (dtim-avgdtim)*.05; print6x8(&dd,dd.x-64,0,0xffffff,0,"%.2f fps",1.0/avgdtim);
 			print6x8(&dd,dd.x-64,8,0xffffff,0,"cam %d",camuse);
