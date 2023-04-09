@@ -329,16 +329,20 @@ int main (int argc, char **argv)
 
 				getplane(&lf, &norm, &cent);
 				
-				float t = cent.x*norm.x + cent.y*norm.y + cent.z*norm.z;
+				double t = cent.x*norm.x + cent.y*norm.y + cent.z*norm.z;
 				t = 1/sqrt(norm.x*norm.x + norm.y*norm.y + norm.z*norm.z - t*t);
 				estpos.x = norm.x*t;
 				estpos.y = norm.y*t;
 				estpos.z = norm.z*t;
+				
 
 				t = ihaf.z/estpos.z;
 				float sx = estpos.x*t + ihaf.x;
 				float sy = estpos.y*t + ihaf.y;
-				printf("%f %f %f \n", estpos.x, estpos.y, estpos.z);
+				printf("%f %f %f \n", cent.x, cent.y, cent.z);
+				printf("%f %f %f \n", norm.x, norm.y, norm.z);
+				printf("%f %f %f \n\n", estpos.x, estpos.y, estpos.z);
+				
 				drawcirc(&dd, (int)sx, (int)sy, 20, 0xff0000);
 
 			}
