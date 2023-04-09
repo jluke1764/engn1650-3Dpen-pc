@@ -1,0 +1,11 @@
+*.o
+.vscode/
+application/3d-pen/.vs
+application/3d-pen/.vsconfig
+application/3d-pen/3d-pen.sln
+application/3d-pen/Assembly-CSharp.csproj
+application/3d-pen/Library/
+application/3d-pen/Logs/
+application/3d-pen/Packages/
+application/3d-pen/Temp/
+
