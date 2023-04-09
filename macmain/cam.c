@@ -161,7 +161,7 @@ int main (int argc, char **argv)
 	xres = 1280; yres = 720; if (!initapp()) return(0);
 
 	Point3D estpos = {.x = 10, .y = 10, .z = 10};
-	Point3D ihaf = {.x = xsiz/2, .y = ysiz/2, .z = ysiz/2*1.96};
+	//Point3D ihaf = {.x = xsiz/2, .y = ysiz/2, .z = ysiz/2*1.96};
 	linefit3d lf = {0};
 	Point3D nnorm = {0};
 	Point3D cent = {0};
@@ -170,6 +170,7 @@ int main (int argc, char **argv)
 	while (!breath())
 	{
 		otim = tim; tim = klock(); dtim = tim-otim;
+		Point3D ihaf = {.x = xsiz/2, .y = ysiz/2, .z = ysiz/2*1.96};
 
 		if (keystatus[0x1]) { keystatus[0x1] = 0; quitloop(); }
 
@@ -178,62 +179,14 @@ int main (int argc, char **argv)
 			drawrectfill(&dd,0,0,dd.x,dd.y,0x000000);
 			
 			bool wasWhite = 0;
-			if (bpl > xsiz)
-			{     //BGRA:
-				static int fifx[1280*800], fify[1280*800], fifw, fifr;
-				memcpy(qcambuf,cambuf,bpl*ysiz);
-				for(y=min(dd.y,ysiz)-1;y>=0;y--)
-				{
-					wasWhite = 0;
-					for(x=min(dd.x,xsiz)-1;x>=0;x--)
-					{
-						i = (qcambuf[y*(bpl>>2) + x]&255);
-						drawpix(&dd,x,y,i*0x10101);
-					    //qcambuf[y*(bpl>>2) + x] = 0;			
-						if (i <= 200) continue;
-						fifx[0] = x; fify[0] = y; fifr = 0; fifw = 1;
-						while (fifr < fifw)
-						{
-							int x2 = fifx[fifr]; int y2 = fify[fifr]; fifr++;
-							for(i=0;i<4;i++)
-							{
-								static const int dirx[4] = {-1,+1,0,0};
-								static const int diry[4] = {0,0,-1,+1};
-								int nx = x2+dirx[i];
-								int ny = y2+diry[i];
-								if ((nx < 0) || (nx >= xsiz)) continue;
-								if ((ny < 0) || (ny >= ysiz)) continue;
-								if ((qcambuf[ny*(bpl>>2) + nx]&255) <= 200) continue;
-								fifx[fifw] = nx;
-								fify[fifw] = ny;
-								fifw++;
-								drawpix(&dd,nx,ny,0xff00ff);
-								qcambuf[ny*(bpl>>2) + nx] = 0;
-							}
-						}
-					}
-				}
-				getplane(&lf, &norm, &cent);
-				
-				float t = cent.x*norm.x + cent.y*norm.y + cent.z*norm.z;
-				t = 1/sqrt(norm.x*norm.x + norm.y*norm.y + norm.z*norm.z - t*t);
-				estpos.x = norm.x*t;
-				estpos.y = norm.y*t;
-				estpos.z = norm.z*t;
-
-				t = ihaf.z/estpos.z;
-				float sx = estpos.x*t + ihaf.x;
-				float sy = estpos.y*t + ihaf.y;
-				
-				drawcirc(&dd, (int)sx, (int)sy, 10, 0xffff0000);
-			}
-			else if (bpl)
+			if (bpl)
 			{     //8-bit gray:
 				static int fifx[1280*800], fify[1280*800], fifw, fifr;
 				static char got[1280*800];
 
 				memcpy(pcambuf,cambuf,bpl*ysiz);
 				memset(got,0,xsiz*ysiz);
+				memset(&lf,0,sizeof(lf));
 
 				int largest_sumx, largest_sumy, largest_fifw, init_x, init_y = 0;
 
@@ -339,9 +292,9 @@ int main (int argc, char **argv)
 				t = ihaf.z/estpos.z;
 				float sx = estpos.x*t + ihaf.x;
 				float sy = estpos.y*t + ihaf.y;
-				printf("%f %f %f \n", cent.x, cent.y, cent.z);
-				printf("%f %f %f \n", norm.x, norm.y, norm.z);
-				printf("%f %f %f \n\n", estpos.x, estpos.y, estpos.z);
+				print6x8(&dd,dd.x-1000,8,0xffffff,0,"%3.2f %3.2f %3.2f \n", cent.x, cent.y, cent.z);
+				print6x8(&dd,dd.x-1000,16,0xffffff,0,"%3.2f %3.2f %3.2f \n", norm.x, norm.y, norm.z);
+				print6x8(&dd,dd.x-1000,24,0xffffff,0,"%3.2f %3.2f %3.2f \n\n", estpos.x, estpos.y, estpos.z);
 				
 				drawcirc(&dd, (int)sx, (int)sy, 20, 0xff0000);
 
