@@ -355,8 +355,6 @@ int main (int argc, char **argv)
 
 				send(new_socket, estpos_str, strlen(estpos_str), 0);
 				
-				
-				
 				drawcirc(&dd, (int)sx, (int)sy, 20, 0xff0000);
 
 			}
