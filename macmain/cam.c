@@ -148,7 +148,7 @@ void getplane (linefit3d* self, Point3D* norm, Point3D* cent ){
 
 int main (int argc, char **argv)
 {
-
+	/*
 	int server_fd, new_socket, valread;
     struct sockaddr_in address;
     int opt = 1;
@@ -161,14 +161,15 @@ int main (int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 	printf("SOCKET CONNECTED: %d\n", server_fd);
-	/*
-	if (setsockopt(server_fd, SOL_SOCKET,
-                   SO_REUSEADDR | SO_REUSEPORT, &opt,
-                   sizeof(opt))) {
-        perror("setsockopt");
-        exit(EXIT_FAILURE);
-    }
-	*/
+	
+	
+	//if (setsockopt(server_fd, SOL_SOCKET,
+    //               SO_REUSEADDR | SO_REUSEPORT, &opt,
+    //               sizeof(opt))) {
+    //    perror("setsockopt");
+    //    exit(EXIT_FAILURE);
+    //}
+
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = INADDR_ANY;
     address.sin_port = htons(PORT);
@@ -192,6 +193,7 @@ int main (int argc, char **argv)
         perror("accept");
         exit(EXIT_FAILURE);
     }
+	*/
   
 	tiletype dd;
 	double tim = 0.0, otim, dtim, avgdtim = 0.0;
@@ -219,7 +221,7 @@ int main (int argc, char **argv)
 		otim = tim; tim = klock(); dtim = tim-otim;
 		Point3D ihaf = {.x = xsiz/2, .y = ysiz/2, .z = ysiz/2*1.96};
 
-		if (keystatus[0x1]) { keystatus[0x1] = 0; close(new_socket); quitloop(); }
+		if (keystatus[0x1]) { keystatus[0x1] = 0;  quitloop(); } //close(new_socket);
 
 		if (startdirectdraw(&dd.f,&dd.p,&dd.x,&dd.y))
 		{
@@ -233,9 +235,9 @@ int main (int argc, char **argv)
 
 				memcpy(pcambuf,cambuf,bpl*ysiz);
 				memset(got,0,xsiz*ysiz);
-				memset(&lf,0,sizeof(lf));
+				
 
-				int largest_sumx, largest_sumy, largest_fifw, init_x, init_y = 0;
+				int largest_fifw = 0;
 
 				for(y=min(dd.y,ysiz)-1;y>=0;y--)
 				{
@@ -255,7 +257,6 @@ int main (int argc, char **argv)
 						if (got[y*xsiz + x]) continue;
 					    got[y*xsiz + x] = 1;
 						fifx[0] = x; fify[0] = y; fifr = 0; fifw = 1;
-						largest_sumx = 0; largest_sumy = 0; largest_fifw = 0; init_x =0; init_y = 0;
 						int sumx = 0, sumy = 0;
 						while (fifr < fifw)
 						{
@@ -280,31 +281,61 @@ int main (int argc, char **argv)
 								
 								drawpix(&dd,nx,ny,0xaa00aa);
 								got[ny*xsiz + nx] = 1;	
-
-								if (fifw > largest_fifw)
-								{
-									largest_sumx = sumx;
-									largest_sumy = sumy;
-									largest_fifw = fifw;
-									init_x = nx;
-									init_y = ny;
-								}			
+			
 							}
+						}
+
+						if (fifw > largest_fifw)
+						{
+							memset(&lf,0,sizeof(lf));
+							largest_fifw = fifw;
+							for(i=0;i<fifw;i++)
+							{
+								int it_x = fifx[i];
+								int it_y = fify[i];
+								if (it_x <= 0) continue;
+								if (it_x >= 1279) continue;
+								if (it_y <= 0) continue;
+								if (it_y >= 799) continue;
+
+								//make sure on boundary
+								if ((pcambuf[(it_y+0)*bpl + (it_x-1)] <= 200) ||
+								    (pcambuf[(it_y+0)*bpl + (it_x+1)] <= 200) ||
+									(pcambuf[(it_y-1)*bpl + (it_x+0)] <= 200) ||
+									(pcambuf[(it_y+1)*bpl + (it_x+0)] <= 200))
+								{
+									//on edge: so addpoint
+									drawpix(&dd,it_x,it_y,0x00ff00);
+									float vx = it_x-ihaf.x;
+									float vy = it_y-ihaf.y;
+									float vz = ihaf.z;
+									float t = 1/sqrt(vx * vx + vy * vy + vz * vz);
+									addPoint(&lf, vx*t, vy*t, vz*t);
+								}
+								
+							}
+							
+							getplane(&lf, &norm, &cent);
+				
+							double t = cent.x*norm.x + cent.y*norm.y + cent.z*norm.z;
+							t = 1/sqrt(norm.x*norm.x + norm.y*norm.y + norm.z*norm.z - t*t);
+							estpos.x = norm.x*t;
+							estpos.y = norm.y*t;
+							estpos.z = norm.z*t;
 						}
 						
 						dammit:;
-						// find highest fifw
-						//find center of it
 					}
+					
 				}
 				
+#if 0		
 				drawcirc(&dd,(float)largest_sumx/largest_fifw,(float)largest_sumy/largest_fifw,sqrt(largest_fifw),0xffffff);
 				static const int dir2x[6] = {-3, -2, -1,  0, +1, +2};
 				static const int dir2y[6] = {+1, +1, -1, +1, +1, +1};
 
 				drawcirc(&dd,init_x,init_y,20,0x00ffff);
-
-				
+	
 				for(int j = 0; j<6; j++)
 				{
 					int it_x = init_x;
@@ -326,19 +357,13 @@ int main (int argc, char **argv)
 						}
 					}
 				}
+#endif
 
-				getplane(&lf, &norm, &cent);
-				
-				double t = cent.x*norm.x + cent.y*norm.y + cent.z*norm.z;
-				t = 1/sqrt(norm.x*norm.x + norm.y*norm.y + norm.z*norm.z - t*t);
-				estpos.x = norm.x*t;
-				estpos.y = norm.y*t;
-				estpos.z = norm.z*t;
-				
 
-				t = ihaf.z/estpos.z;
-				float sx = estpos.x*t + ihaf.x;
-				float sy = estpos.y*t + ihaf.y;
+				float tt = ihaf.z/estpos.z;
+				float sx = estpos.x*tt + ihaf.x;
+				float sy = estpos.y*tt + ihaf.y;
+				
 				bool sign_x = estpos.x > 0;
 				bool sign_y = estpos.y > 0;
 				bool sign_z = estpos.z > 0;
@@ -353,7 +378,7 @@ int main (int argc, char **argv)
 				char estpos_str[32];
 				sprintf(estpos_str, "%d,%5.2f,%d,%5.2f,%d,%5.2f ", sign_x, estpos.x, sign_y, estpos.y, sign_z, estpos.z);
 
-				send(new_socket, estpos_str, strlen(estpos_str), 0);
+				//send(new_socket, estpos_str, strlen(estpos_str), 0);
 				
 				drawcirc(&dd, (int)sx, (int)sy, 20, 0xff0000);
 
