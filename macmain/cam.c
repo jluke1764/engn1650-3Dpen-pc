@@ -148,7 +148,7 @@ void getplane (linefit3d* self, Point3D* norm, Point3D* cent ){
 
 int main (int argc, char **argv)
 {
-	/*
+	
 	int server_fd, new_socket, valread;
     struct sockaddr_in address;
     int opt = 1;
@@ -193,7 +193,7 @@ int main (int argc, char **argv)
         perror("accept");
         exit(EXIT_FAILURE);
     }
-	*/
+	
   
 	tiletype dd;
 	double tim = 0.0, otim, dtim, avgdtim = 0.0;
@@ -221,7 +221,7 @@ int main (int argc, char **argv)
 		otim = tim; tim = klock(); dtim = tim-otim;
 		Point3D ihaf = {.x = xsiz/2, .y = ysiz/2, .z = ysiz/2*1.96};
 
-		if (keystatus[0x1]) { keystatus[0x1] = 0;  quitloop(); } //close(new_socket);
+		if (keystatus[0x1]) { keystatus[0x1] = 0;  quitloop(); close(new_socket);}
 
 		if (startdirectdraw(&dd.f,&dd.p,&dd.x,&dd.y))
 		{
@@ -325,39 +325,9 @@ int main (int argc, char **argv)
 						}
 						
 						dammit:;
-					}
-					
+					}					
 				}
-				
-#if 0		
-				drawcirc(&dd,(float)largest_sumx/largest_fifw,(float)largest_sumy/largest_fifw,sqrt(largest_fifw),0xffffff);
-				static const int dir2x[6] = {-3, -2, -1,  0, +1, +2};
-				static const int dir2y[6] = {+1, +1, -1, +1, +1, +1};
 
-				drawcirc(&dd,init_x,init_y,20,0x00ffff);
-	
-				for(int j = 0; j<6; j++)
-				{
-					int it_x = init_x;
-					int it_y = init_y;
-					while (it_x < xsiz && it_y < ysiz)
-					{
-						it_x = it_x + dir2x[j];
-						it_y = it_y + dir2y[j];
-						if ((it_x < 0) || (it_x >= xsiz)) break;
-						if ((it_y < 0) || (it_y >= ysiz)) break;
-						if (pcambuf[it_y*bpl + it_x] <= 200){
-							drawcirc(&dd,it_x,it_y,5,0x00ff00);
-							float vx = it_x-ihaf.x;
-							float vy = it_y-ihaf.y;
-							float vz = ihaf.z;
-							float t = 1/sqrt(vx * vx + vy * vy + vz * vz);
-							addPoint(&lf, vx*t, vy*t, vz*t);
-							break;
-						}
-					}
-				}
-#endif
 
 
 				float tt = ihaf.z/estpos.z;
@@ -378,7 +348,7 @@ int main (int argc, char **argv)
 				char estpos_str[32];
 				sprintf(estpos_str, "%d,%5.2f,%d,%5.2f,%d,%5.2f ", sign_x, estpos.x, sign_y, estpos.y, sign_z, estpos.z);
 
-				//send(new_socket, estpos_str, strlen(estpos_str), 0);
+				send(new_socket, estpos_str, strlen(estpos_str), 0);
 				
 				drawcirc(&dd, (int)sx, (int)sy, 20, 0xff0000);
 
