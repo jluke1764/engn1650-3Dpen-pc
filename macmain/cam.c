@@ -334,12 +334,15 @@ int main (int argc, char **argv)
 				float sx = estpos.x*tt + ihaf.x;
 				float sy = estpos.y*tt + ihaf.y;
 				
-				bool sign_x = estpos.x > 0;
-				bool sign_y = estpos.y > 0;
-				bool sign_z = estpos.z > 0;
+				bool sign_x = estpos.x < 0;
+				bool sign_y = estpos.y < 0;
+				bool sign_z = estpos.z < 0;
 				estpos.x = fabsf(estpos.x);
 				estpos.y = fabsf(estpos.y);
 				estpos.z = fabsf(estpos.z);
+
+				estpos.x = 1 - estpos.x;
+				estpos.y = 1 - estpos.y;
 
 				//print6x8(&dd,dd.x-1000,8,0xffffff,0,"%3.2f %3.2f %3.2f \n", cent.x, cent.y, cent.z);
 				//print6x8(&dd,dd.x-1000,16,0xffffff,0,"%3.2f %3.2f %3.2f \n", norm.x, norm.y, norm.z);
