@@ -64,13 +64,15 @@ public class Connect : MonoBehaviour
                         string serverMessage = Encoding.ASCII.GetString(incommingData);
                         //Debug.Log("received: " + serverMessage);
                         string[] datas = serverMessage.Split(',');
-                        pos.x = (datas[0]=="1"? 1 : -1) * float.Parse(datas[1]) *2;
-                        pos.y = (datas[2] == "1" ? 1 : -1) * float.Parse(datas[3])*2;
-                        pos.z = (datas[4] == "1" ? 1 : -1) * float.Parse(datas[5])*2;
-                        Debug.Log(pos.x);
-                        Debug.Log(pos.y);
-                        Debug.Log(pos.z);
-
+                        if(datas.Length >= 6)
+                        {
+                            pos.x = (datas[0] == "1" ? 1 : -1) * float.Parse(datas[1]) * 2;
+                            pos.y = (datas[2] == "1" ? 1 : -1) * float.Parse(datas[3]) * 2;
+                            pos.z = (datas[4] == "1" ? 1 : -1) * float.Parse(datas[5]) * 2;
+                            //Debug.Log(pos.x);
+                            //Debug.Log(pos.y);
+                            //Debug.Log(pos.z);
+                        }
                     }
                 }
             }
@@ -95,7 +97,6 @@ public class Connect : MonoBehaviour
 
     void Update()
     {
-        Debug.Log("here");
         cursor.transform.position = pos;
     }
 }
