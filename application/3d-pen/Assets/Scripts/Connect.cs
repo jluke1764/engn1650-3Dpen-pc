@@ -66,9 +66,9 @@ public class Connect : MonoBehaviour
                         string[] datas = serverMessage.Split(',');
                         if(datas.Length >= 6)
                         {
-                            pos.x = (datas[0] == "1" ? 1 : -1) * float.Parse(datas[1]) * 2;
-                            pos.y = (datas[2] == "1" ? 1 : -1) * float.Parse(datas[3]) * 2;
-                            pos.z = (datas[4] == "1" ? 1 : -1) * float.Parse(datas[5]) * 2;
+                            pos.x = (datas[0] == "1" ? -1 : 1) * float.Parse(datas[1]) * 2;
+                            pos.y = (datas[2] == "1" ? -1 : 1) * float.Parse(datas[3]) * 2;
+                            pos.z = (datas[4] == "1" ? -1 : 1) * float.Parse(datas[5]) * 2;
                             //Debug.Log(pos.x);
                             //Debug.Log(pos.y);
                             //Debug.Log(pos.z);
