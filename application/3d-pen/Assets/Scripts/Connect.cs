@@ -66,8 +66,8 @@ public class Connect : MonoBehaviour
                         string[] datas = serverMessage.Split(',');
                         float x, y, z;
                         bool x_try = float.TryParse(datas[1], out x);
-                        bool y_try = float.TryParse(datas[2], out y);
-                        bool z_try = float.TryParse(datas[3], out z);
+                        bool y_try = float.TryParse(datas[3], out y);
+                        bool z_try = float.TryParse(datas[5], out z);
                         if(datas.Length >= 6 && x_try && y_try && z_try)
                         {
                             pos.x = (datas[0] == "1" ? -1 : 1) * x * 2;
@@ -77,13 +77,7 @@ public class Connect : MonoBehaviour
                             //Debug.Log(pos.y);
                             //Debug.Log(pos.z);
                         }
-                        else
-                        {
-                            Debug.Log(x);
-                            Debug.Log(y);
-                            Debug.Log(z);
-                        }
-
+                        
                     }
                 }
             }
